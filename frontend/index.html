@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Companion - AI Assistant</title>
+    <meta name="description" content="Adaptive learning assistant powered by Gemini AI">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Marked.js for parsing Markdown from Gemini -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <h1 class="logo">Learning Companion <span class="badge">AI</span></h1>
+            <p class="subtitle">Adaptive micro-learning tailored to your progress</p>
+        </header>
+
+        <main class="main-content" id="main-content">
+            <section class="topic-input-section" aria-labelledby="topic-heading">
+                <h2 id="topic-heading" class="sr-only">Choose a Topic</h2>
+                <form id="learn-form" class="learn-form">
+                    <label for="topic-input" class="sr-only">What do you want to learn today?</label>
+                    <input 
+                        type="text" 
+                        id="topic-input" 
+                        class="topic-input" 
+                        placeholder="What do you want to learn today?" 
+                        required 
+                        aria-required="true"
+                    >
+                    <button type="submit" class="primary-btn" id="learn-btn">
+                        <span class="btn-text">Generate Lesson</span>
+                        <div class="loader hidden" id="btn-loader" aria-hidden="true"></div>
+                    </button>
+                </form>
+            </section>
+
+            <div class="content-wrapper">
+                <section class="lesson-section" aria-labelledby="lesson-heading">
+                    <h2 id="lesson-heading" class="section-title">Your Lesson</h2>
+                    <div id="lesson-content" class="lesson-content empty" aria-live="polite">
+                        <p class="placeholder-text">Enter a topic above to generate an adaptive lesson based on your current level.</p>
+                    </div>
+                    <div class="lesson-actions hidden" id="lesson-actions">
+                        <button id="complete-btn" class="success-btn">Mark as Completed</button>
+                    </div>
+                </section>
+
+                <aside class="progress-section" aria-labelledby="progress-heading">
+                    <h2 id="progress-heading" class="section-title">Your Progress</h2>
+                    <ul id="progress-list" class="progress-list" aria-live="polite">
+                        <!-- Progress items will be dynamically inserted here -->
+                    </ul>
+                </aside>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
