@@ -1,49 +1,39 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { Firestore } from '@google-cloud/firestore';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Google Cloud Firestore - replaces JSON file storage
+const db = new Firestore({
+  projectId: process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT_ID || 'iconic-computer-494405-c3',
+});
 
-const DB_PATH = path.resolve(__dirname, '../../progress.json');
+const COLLECTION = 'learning_progress';
 
-// Initialize file if it doesn't exist
-if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify([]), 'utf8');
-}
-
-const readData = () => {
-  try {
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-  } catch {
-    return [];
-  }
+export const getAll = async () => {
+  const snapshot = await db.collection(COLLECTION).orderBy('last_accessed', 'desc').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-const writeData = (data) => {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+export const getByTopic = async (topic) => {
+  const snapshot = await db.collection(COLLECTION)
+    .where('topic', '==', topic.toLowerCase())
+    .limit(1)
+    .get();
+  if (snapshot.empty) return null;
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 };
 
-export const getAll = () => readData();
-
-export const getByTopic = (topic) => {
-  const data = readData();
-  return data.find(item => item.topic === topic.toLowerCase()) || null;
-};
-
-export const upsert = (topic, level) => {
-  const data = readData();
+export const upsert = async (topic, level) => {
   const topicLower = topic.toLowerCase();
-  const index = data.findIndex(item => item.topic === topicLower);
   const now = new Date().toISOString();
+  const snapshot = await db.collection(COLLECTION)
+    .where('topic', '==', topicLower)
+    .limit(1)
+    .get();
 
-  if (index > -1) {
-    data[index].level = level;
-    data[index].last_accessed = now;
+  if (!snapshot.empty) {
+    await snapshot.docs[0].ref.update({ level, last_accessed: now });
   } else {
-    data.push({ id: Date.now(), topic: topicLower, level, last_accessed: now });
+    await db.collection(COLLECTION).add({ topic: topicLower, level, last_accessed: now });
   }
 
-  writeData(data);
   return { topic: topicLower, level };
 };
