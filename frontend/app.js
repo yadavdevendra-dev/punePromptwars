@@ -1,27 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const learnForm = document.getElementById('learn-form');
+    const chatForm = document.getElementById('chat-form');
     const topicInput = document.getElementById('topic-input');
-    const btnText = document.querySelector('.btn-text');
-    const btnLoader = document.getElementById('btn-loader');
-    const learnBtn = document.getElementById('learn-btn');
-    
-    const lessonContent = document.getElementById('lesson-content');
-    const lessonActions = document.getElementById('lesson-actions');
-    const completeBtn = document.getElementById('complete-btn');
+    const chatBox = document.getElementById('chat-box');
+    const welcomeScreen = document.getElementById('welcome-screen');
     const progressList = document.getElementById('progress-list');
+    const newChatBtn = document.getElementById('new-chat-btn');
 
     let currentTopic = '';
 
-    // Fetch initial progress on load
+    // Fetch progress on load
     fetchProgress();
 
-    learnForm.addEventListener('submit', async (e) => {
+    newChatBtn.addEventListener('click', () => {
+        chatBox.innerHTML = '';
+        chatBox.appendChild(welcomeScreen);
+        welcomeScreen.style.display = 'block';
+        topicInput.focus();
+    });
+
+    chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const topic = topicInput.value.trim();
         if (!topic) return;
 
-        setLoading(true);
+        // Hide welcome screen
+        welcomeScreen.style.display = 'none';
+
+        // Add user message
+        appendMessage('user', topic);
+        topicInput.value = '';
         currentTopic = topic;
+
+        // Show typing indicator
+        const typingId = showTypingIndicator();
 
         try {
             const response = await fetch('/api/learn', {
@@ -30,67 +41,113 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ topic })
             });
 
-            if (!response.ok) throw new Error('Failed to fetch lesson');
+            removeTypingIndicator(typingId);
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Failed to fetch lesson');
+            }
 
             const data = await response.json();
             
-            // Render markdown content
-            lessonContent.innerHTML = marked.parse(data.content);
-            lessonContent.classList.remove('empty');
-            lessonContent.classList.add('fade-in');
+            // Add bot message with markdown
+            appendMessage('bot', data.content, true, data.topic);
             
-            // Show actions
-            lessonActions.classList.remove('hidden');
-
-            // Optionally, fetch progress again to reflect that they started a topic
+            // Update progress list
             fetchProgress();
 
         } catch (error) {
-            console.error(error);
-            lessonContent.innerHTML = `<p style="color: #ef4444;">Error generating lesson. Please try again.</p>`;
-        } finally {
-            setLoading(false);
+            removeTypingIndicator(typingId);
+            appendMessage('bot', `**Error:** ${error.message}. Please try again.`, true);
         }
     });
 
-    completeBtn.addEventListener('click', async () => {
-        if (!currentTopic) return;
+    function appendMessage(sender, text, isMarkdown = false, topicContext = null) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${sender}`;
+
+        let contentHtml = '';
+        if (sender === 'bot') {
+            contentHtml += `<div class="bot-avatar"><span class="material-icons-outlined" style="font-size: 18px;">auto_awesome</span></div>`;
+        }
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble markdown-body';
         
-        completeBtn.disabled = true;
-        completeBtn.textContent = 'Saving...';
+        if (isMarkdown) {
+            bubbleDiv.innerHTML = marked.parse(text);
+            
+            if (topicContext) {
+                const btn = document.createElement('button');
+                btn.className = 'mark-complete-btn';
+                btn.textContent = 'Mark as Completed';
+                btn.onclick = () => markCompleted(topicContext, btn);
+                bubbleDiv.appendChild(btn);
+            }
+        } else {
+            bubbleDiv.textContent = text;
+        }
+
+        msgDiv.appendChild(contentHtml ? new DOMParser().parseFromString(contentHtml, 'text/html').body.firstChild : document.createTextNode(''));
+        if(sender === 'bot') {
+            msgDiv.innerHTML = contentHtml;
+        }
+        msgDiv.appendChild(bubbleDiv);
+        
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+        const id = 'typing-' + Date.now();
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message bot';
+        msgDiv.id = id;
+        
+        msgDiv.innerHTML = `
+            <div class="bot-avatar"><span class="material-icons-outlined" style="font-size: 18px;">auto_awesome</span></div>
+            <div class="message-bubble">
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
+        
+        chatBox.appendChild(msgDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return id;
+    }
+
+    function removeTypingIndicator(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    async function markCompleted(topic, btn) {
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
 
         try {
             const response = await fetch('/api/progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic: currentTopic, completed: true })
+                body: JSON.stringify({ topic, completed: true })
             });
 
             if (!response.ok) throw new Error('Failed to update progress');
 
-            completeBtn.textContent = 'Completed! 🎉';
-            completeBtn.classList.replace('success-btn', 'primary-btn');
+            btn.textContent = 'Completed! 🎉';
+            btn.style.borderColor = '#10b981';
+            btn.style.color = '#10b981';
             
-            // Refresh progress list
             fetchProgress();
-
-            setTimeout(() => {
-                completeBtn.disabled = false;
-                completeBtn.textContent = 'Mark as Completed';
-                completeBtn.classList.replace('primary-btn', 'success-btn');
-                lessonActions.classList.add('hidden');
-                topicInput.value = '';
-                topicInput.focus();
-                lessonContent.innerHTML = '<p class="placeholder-text">Great job! Enter a new topic to continue learning.</p>';
-                lessonContent.classList.add('empty');
-            }, 2000);
-
         } catch (error) {
-            console.error(error);
-            completeBtn.textContent = 'Error. Try again.';
-            completeBtn.disabled = false;
+            btn.textContent = 'Error. Try again.';
+            btn.disabled = false;
         }
-    });
+    }
 
     async function fetchProgress() {
         try {
@@ -101,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderProgress(data);
         } catch (error) {
             console.error('Error fetching progress:', error);
-            progressList.innerHTML = '<li>Error loading progress.</li>';
         }
     }
 
@@ -109,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressList.innerHTML = '';
         
         if (progressData.length === 0) {
-            progressList.innerHTML = '<li class="placeholder-text" style="font-size: 0.9rem; color: var(--text-secondary);">No topics learned yet. Start exploring!</li>';
+            progressList.innerHTML = '<li style="color: var(--text-secondary); font-size: 0.8rem; padding: 1rem;">No topics yet.</li>';
             return;
         }
 
@@ -123,25 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             li.innerHTML = `
                 <div class="progress-topic">${escapeHTML(item.topic)}</div>
-                <div class="progress-level">
-                    <span class="level-badge">Lvl ${item.level}</span>
-                    <span>${levelLabel}</span>
-                </div>
+                <div class="progress-level">Level ${item.level} • ${levelLabel}</div>
             `;
+            
+            li.addEventListener('click', () => {
+                topicInput.value = item.topic;
+                chatForm.dispatchEvent(new Event('submit'));
+            });
+
             progressList.appendChild(li);
         });
-    }
-
-    function setLoading(isLoading) {
-        if (isLoading) {
-            btnText.classList.add('hidden');
-            btnLoader.classList.remove('hidden');
-            learnBtn.disabled = true;
-        } else {
-            btnText.classList.remove('hidden');
-            btnLoader.classList.add('hidden');
-            learnBtn.disabled = false;
-        }
     }
 
     function escapeHTML(str) {
