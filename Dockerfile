@@ -1,6 +1,6 @@
 # Use the official Node.js image.
 # https://hub.docker.com/_/node
-FROM node:20-slim
+FROM node:20
 
 # Create and change to the app directory.
 WORKDIR /usr/src/app
@@ -24,7 +24,7 @@ WORKDIR /usr/src/app/backend
 
 # Ensure the DB file can be written by creating a placeholder and setting permissions 
 # (SQLite needs write access to the directory)
-RUN touch ../data.sqlite && chmod 666 ../data.sqlite
+RUN touch data.sqlite && chmod 666 data.sqlite
 
 # Run the web service on container startup.
 CMD [ "npm", "start" ]
