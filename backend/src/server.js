@@ -26,12 +26,16 @@ app.use(cors());
 // Body parser with size limit → Security
 app.use(express.json({ limit: '10kb' }));
 
+// Trust Cloud Run / GCP proxy (fixes X-Forwarded-For rate-limit error)
+app.set('trust proxy', 1);
+
 // Rate limiting → Security (100 requests per 15 min per IP)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use('/api', limiter);
