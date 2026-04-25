@@ -80,11 +80,18 @@ document.addEventListener('DOMContentLoaded', () => {
             bubbleDiv.innerHTML = marked.parse(text);
             
             if (topicContext) {
-                const btn = document.createElement('button');
-                btn.className = 'mark-complete-btn';
-                btn.textContent = 'Mark as Completed';
-                btn.onclick = () => markCompleted(topicContext, btn);
-                bubbleDiv.appendChild(btn);
+                const completeBtn = document.createElement('button');
+                completeBtn.className = 'mark-complete-btn';
+                completeBtn.textContent = 'Mark as Completed';
+                completeBtn.onclick = () => markCompleted(topicContext, completeBtn);
+                bubbleDiv.appendChild(completeBtn);
+
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'mark-complete-btn';
+                saveBtn.style.marginLeft = '10px';
+                saveBtn.innerHTML = '<span class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">cloud_upload</span> Save to Cloud';
+                saveBtn.onclick = () => saveToCloud(topicContext, text, saveBtn);
+                bubbleDiv.appendChild(saveBtn);
             }
         } else {
             bubbleDiv.textContent = text;
@@ -147,6 +154,29 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchProgress();
         } catch (error) {
             btn.textContent = 'Error. Try again.';
+            btn.disabled = false;
+        }
+    }
+
+    async function saveToCloud(topic, content, btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Saving...';
+
+        try {
+            const response = await fetch('/api/storage/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic, content })
+            });
+
+            if (!response.ok) throw new Error('Failed to save to cloud');
+
+            const data = await response.json();
+            btn.innerHTML = `<a href="${data.url}" target="_blank" style="color: inherit; text-decoration: none;">Saved! (View)</a>`;
+            btn.style.borderColor = '#10b981';
+            btn.style.color = '#10b981';
+        } catch (error) {
+            btn.innerHTML = 'Error. Try again.';
             btn.disabled = false;
         }
     }
