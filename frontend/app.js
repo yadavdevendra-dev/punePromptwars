@@ -92,6 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBtn.innerHTML = '<span class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">cloud_upload</span> Save to Cloud';
                 saveBtn.onclick = () => saveToCloud(topicContext, text, saveBtn);
                 bubbleDiv.appendChild(saveBtn);
+
+                const playBtn = document.createElement('button');
+                playBtn.className = 'mark-complete-btn';
+                playBtn.style.marginLeft = '10px';
+                playBtn.innerHTML = '<span class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">volume_up</span> Play Audio';
+                playBtn.onclick = () => playAudio(text, langSelect.value, playBtn);
+                bubbleDiv.appendChild(playBtn);
             }
         } else {
             bubbleDiv.textContent = text;
@@ -178,6 +185,39 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             btn.innerHTML = 'Error. Try again.';
             btn.disabled = false;
+        }
+    }
+
+    async function playAudio(text, language, btn) {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">hourglass_empty</span> Loading...';
+
+        try {
+            const response = await fetch('/api/tts/synthesize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, language })
+            });
+
+            if (!response.ok) throw new Error('Failed to load audio');
+
+            const data = await response.json();
+            const audio = new Audio("data:audio/mp3;base64," + data.audio);
+            audio.play();
+            
+            btn.innerHTML = '<span class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">volume_up</span> Playing...';
+            
+            audio.onended = () => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            };
+        } catch (error) {
+            btn.innerHTML = 'Audio Error';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }, 2000);
         }
     }
 

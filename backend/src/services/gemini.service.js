@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import NodeCache from 'node-cache';
-import { getSecret } from './secret.service.js';
 import { logger } from './logger.service.js';
 
 // In-memory cache — TTL 1 hour (3600s) for same topic+level combos → boosts Efficiency score
@@ -8,10 +7,13 @@ const cache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 let genAI = null;
 
-const getClient = async () => {
+const getClient = () => {
   if (genAI) return genAI;
-  // Fetch API key from Secret Manager (falls back to .env locally)
-  const apiKey = await getSecret('GEMINI_API_KEY', process.env.GEMINI_API_KEY || 'dummy-key');
+  // Cloud Run automatically mounts the secret to process.env via --set-secrets!
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'dummy-key') {
+      logger.warn('GEMINI_API_KEY is not set or invalid.');
+  }
   genAI = new GoogleGenerativeAI(apiKey);
   return genAI;
 };
@@ -35,7 +37,7 @@ export const generateLearningContent = async (topic, level, language = 'English'
   }
 
   try {
-    const client = await getClient();
+    const client = getClient();
     const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let levelDescription = 'beginner';
