@@ -17,14 +17,15 @@ const getClient = async () => {
 };
 
 /**
- * Generate adaptive learning content using Gemini 1.5 Pro.
+ * Generate adaptive learning content using Gemini 1.5 Flash.
  * Results are cached to reduce latency and API costs.
  * @param {string} topic
  * @param {number} level
+ * @param {string} language
  * @returns {Promise<string>}
  */
-export const generateLearningContent = async (topic, level) => {
-  const cacheKey = `${topic.toLowerCase()}_level${level}`;
+export const generateLearningContent = async (topic, level, language = 'English') => {
+  const cacheKey = `${topic.toLowerCase()}_level${level}_${language}`;
 
   // Return cached response if available
   const cached = cache.get(cacheKey);
@@ -35,7 +36,7 @@ export const generateLearningContent = async (topic, level) => {
 
   try {
     const client = await getClient();
-    const model = client.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let levelDescription = 'beginner';
     if (level === 2) levelDescription = 'intermediate';
@@ -44,6 +45,7 @@ export const generateLearningContent = async (topic, level) => {
     const prompt = `You are an expert learning companion. The user wants to learn about "${topic}". 
     They are currently at a(n) ${levelDescription} level (Level ${level}). 
     Provide a brief, engaging, and highly informative lesson on this topic suitable for their level.
+    You MUST respond completely in this language: ${language}.
     Format the response in Markdown. Keep it under 300 words. 
     Include a short "Next Steps" or "Concept to Ponder" section at the end to encourage further learning.`;
 

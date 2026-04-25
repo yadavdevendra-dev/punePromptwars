@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const welcomeScreen = document.getElementById('welcome-screen');
     const progressList = document.getElementById('progress-list');
     const newChatBtn = document.getElementById('new-chat-btn');
+    const langSelect = document.getElementById('language-select');
 
     let currentTopic = '';
 
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         appendMessage('user', topic);
         topicInput.value = '';
         currentTopic = topic;
+        const language = langSelect.value;
 
         // Show typing indicator
         const typingId = showTypingIndicator();
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/learn', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic })
+                body: JSON.stringify({ topic, language })
             });
 
             removeTypingIndicator(typingId);
