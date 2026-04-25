@@ -12,7 +12,7 @@ COPY backend/package*.json ./backend/
 
 # Install dependencies in the backend directory
 WORKDIR /usr/src/app/backend
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy local code to the container image.
 WORKDIR /usr/src/app
